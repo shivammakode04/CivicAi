@@ -1,152 +1,280 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>User Dashboard</title>
+    <title>Citizen Portal | Civic AI</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .sidebar-grad { background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%); } /* Indigo Theme for Users */
+        .nav-item.active { background: rgba(255,255,255,0.1); border-left: 4px solid #6366f1; color: white; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
-<body class="bg-slate-50 font-sans" x-data="{ tab: 'active' }">
+<body class="bg-indigo-50 font-sans antialiased flex h-screen overflow-hidden" x-data="{ currentTab: 'dashboard' }">
 
-    <nav class="bg-white px-6 py-4 shadow-sm sticky top-0 z-50 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg shadow-indigo-200">
-                <i class="fas fa-robot"></i>
+    <aside class="w-72 sidebar-grad flex-shrink-0 flex flex-col shadow-2xl text-indigo-100 z-20">
+        <div class="p-6 flex items-center gap-3 border-b border-indigo-800/50">
+            <div class="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                <i class="fas fa-hand-holding-heart"></i>
             </div>
-            <h1 class="text-xl font-bold text-slate-800 tracking-tight">Civic AI</h1>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide text-white">Civic AI</h1>
+                <p class="text-[10px] uppercase tracking-wider text-indigo-300">Citizen Portal</p>
+            </div>
         </div>
-        <div class="flex items-center gap-4">
-            <div class="text-right hidden sm:block">
-                <p class="text-sm font-bold text-slate-800">{{ user.username }}</p>
-                <p class="text-xs text-slate-500">{{ user.city|default:"Indore" }}</p>
-            </div>
-            <div class="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-md">
-                {% if user.profile_pic %}
-                <img src="{{ user.profile_pic.url }}" class="w-full h-full object-cover">
-                {% else %}
-                <div class="w-full h-full flex items-center justify-center font-bold text-slate-500">{{ user.username.0|upper }}</div>
-                {% endif %}
-            </div>
-            <a href="{% url 'logout' %}" class="text-slate-400 hover:text-red-500 transition ml-2"><i class="fas fa-power-off text-lg"></i></a>
-        </div>
-    </nav>
 
-    <div class="max-w-5xl mx-auto mt-8 px-4 pb-20">
+        <nav class="flex-1 px-4 space-y-2 mt-6">
+            <a @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'active' : ''" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-indigo-900/50 transition">
+                <i class="fas fa-home w-5"></i> My Dashboard
+            </a>
+            <a @click="currentTab = 'new_case'" :class="currentTab === 'new_case' ? 'active' : ''" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-indigo-900/50 transition">
+                <i class="fas fa-plus-circle w-5"></i> File Complaint
+            </a>
+            <a @click="currentTab = 'history'" :class="currentTab === 'history' ? 'active' : ''" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-indigo-900/50 transition">
+                <i class="fas fa-history w-5"></i> My History
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-indigo-800/50 bg-indigo-900/30 relative group">
+            <div class="flex items-center gap-3">
+                <form id="profile-form" action="{% url 'update_profile_pic' %}" method="POST" enctype="multipart/form-data" class="hidden">
+                    {% csrf_token %}
+                    <input type="file" name="profile_pic" id="profile-input" onchange="document.getElementById('profile-form').submit()">
+                </form>
+                
+                <div onclick="document.getElementById('profile-input').click()" class="w-10 h-10 rounded-full bg-indigo-700 flex items-center justify-center border-2 border-indigo-500 cursor-pointer overflow-hidden relative">
+                    {% if user.profile_pic %}
+                    <img src="{{ user.profile_pic.url }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="font-bold text-white">{{ user.username.0|upper }}</span>
+                    {% endif %}
+                    <div class="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center"><i class="fas fa-camera text-xs text-white"></i></div>
+                </div>
+
+                <div class="overflow-hidden">
+                    <p class="text-sm font-bold text-white truncate">{{ user.username }}</p>
+                    <p class="text-xs text-indigo-300">Citizen</p>
+                </div>
+                <a href="{% url 'logout' %}" class="ml-auto text-indigo-300 hover:text-red-400 p-2"><i class="fas fa-power-off"></i></a>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-indigo-50/50">
         
-        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row items-center gap-6">
-            <div class="flex-1 w-full">
-                <h2 class="text-2xl font-bold text-slate-800">Hello, {{ user.first_name|default:user.username }}! 👋</h2>
-                <p class="text-slate-500 mt-1">Here is what's happening with your reports.</p>
-                <div class="flex gap-4 mt-4">
-                    <button @click="tab='new'" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition transform hover:-translate-y-0.5">
-                        <i class="fas fa-plus-circle mr-2"></i> New Report
-                    </button>
-                    <button @click="tab='active'" :class="tab==='active' ? 'bg-slate-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'" class="px-6 py-2.5 rounded-xl font-bold transition">
-                        My Reports
-                    </button>
-                </div>
+        <header class="bg-white/80 backdrop-blur-md border-b border-indigo-100 px-8 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800 capitalize" x-text="currentTab.replace('_', ' ')"></h2>
+                <p class="text-xs text-slate-500 mt-1">Welcome back, {{ user.username }}</p>
             </div>
-            <div class="flex gap-4">
-                <div class="text-center px-6 py-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <p class="text-2xl font-bold text-slate-800">{{ complaints.count }}</p>
-                    <p class="text-xs text-slate-500 font-bold uppercase">Total</p>
-                </div>
-                <div class="text-center px-6 py-4 bg-green-50 rounded-xl border border-green-100">
-                    <p class="text-2xl font-bold text-green-600">
-                        {% with 0 as closed_count %} 
-                        {{ closed_count }} 
-                        {% endwith %} 
-                        <i class="fas fa-check"></i>
-                    </p>
-                    <p class="text-xs text-green-600 font-bold uppercase">Solved</p>
-                </div>
-            </div>
-        </div>
-
-        <div x-show="tab==='new'" class="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden transition-all duration-300">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-10 -mt-10 opacity-50"></div>
             
-            <h3 class="text-xl font-bold text-slate-800 mb-6">File a new complaint</h3>
-            <form method="POST" action="{% url 'submit_complaint' %}" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="space-y-5">
-                    <div>
-                        <label class="text-sm font-bold text-slate-600 ml-1">Describe the issue</label>
-                        <textarea name="description" class="w-full mt-2 p-4 rounded-xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-200 outline-none h-32 resize-none" placeholder="E.g. Garbage pile at main square..." required></textarea>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-sm font-bold text-slate-600 ml-1">Area / Landmark</label>
-                            <input type="text" name="location_name" class="w-full mt-2 p-3 rounded-xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-200 outline-none" required>
-                        </div>
-                        <div>
-                            <label class="text-sm font-bold text-slate-600 ml-1">Pincode</label>
-                            <input type="text" name="pincode" class="w-full mt-2 p-3 rounded-xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-200 outline-none" required>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="text-sm font-bold text-slate-600 ml-1">Evidence</label>
-                        <input type="file" name="image" class="w-full mt-2 p-2 bg-slate-50 rounded-xl text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200">
-                    </div>
-                    <button class="w-full py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 shadow-lg transition">Submit Report</button>
+            <div class="flex items-center gap-6">
+                <div class="text-right hidden sm:block">
+                    <div id="clock-time" class="text-xl font-mono font-bold text-indigo-900">00:00:00</div>
+                    <div id="clock-date" class="text-[10px] text-indigo-400 font-bold tracking-widest uppercase">Fetching...</div>
                 </div>
-            </form>
-        </div>
+                <div class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg border border-indigo-200 flex items-center gap-2">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span class="text-sm font-bold">{{ user.city|default:"My City" }}</span>
+                </div>
+            </div>
+        </header>
 
-        <div x-show="tab==='active'" class="space-y-4">
-            {% for c in complaints %}
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition group">
-                <div class="flex justify-between items-start">
-                    <div class="flex gap-4">
-                        <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition">
-                            <i class="fas fa-file-alt text-xl"></i>
+        <div class="p-8 max-w-7xl mx-auto w-full space-y-8">
+
+            <div x-show="currentTab === 'dashboard'" class="fade-in space-y-8" x-cloak>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group">
+                        <div class="relative z-10">
+                            <p class="text-xs font-bold text-indigo-200 uppercase tracking-wider">Impact Score</p>
+                            <h3 class="text-4xl font-extrabold mt-2">{{ stats.score }}</h3>
+                            <p class="text-xs mt-2 bg-white/20 inline-block px-2 py-1 rounded">City Guardian Level</p>
                         </div>
-                        <div>
-                            <h4 class="font-bold text-lg text-slate-800">{{ c.description|truncatechars:50 }}</h4>
-                            <p class="text-sm text-slate-500">{{ c.location_name }} • {{ c.created_at|date:"M d" }}</p>
-                            <span class="inline-block mt-2 px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded uppercase tracking-wide">{{ c.department }}</span>
+                        <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition"><i class="fas fa-medal text-8xl"></i></div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Complaints</p>
+                        <div class="flex items-end gap-2 mt-2">
+                            <h3 class="text-4xl font-extrabold text-slate-800">{{ stats.pending|add:stats.solved }}</h3>
+                            <span class="text-xs text-slate-400 mb-1">In Progress</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">
+                            <div class="bg-indigo-500 h-full" style="width: 70%"></div>
                         </div>
                     </div>
-                    
-                    <div>
-                        {% if c.status == 'Pending' %}
-                            <span class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs font-bold">Processing</span>
-                        {% elif c.status == 'Solved' %}
-                            <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse">Action Required</span>
-                        {% else %}
-                            <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">Fixed</span>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Reported</p>
+                        <h3 class="text-4xl font-extrabold text-slate-800 mt-2">{{ stats.total }}</h3>
+                        <p class="text-xs text-green-500 mt-2 font-bold">Thank you for helping!</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-indigo-50 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-800">Active Issues</h3>
+                        <button @click="currentTab='new_case'" class="bg-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+                            <i class="fas fa-plus mr-1"></i> New Report
+                        </button>
+                    </div>
+
+                    <div class="divide-y divide-indigo-50">
+                        {% for c in complaints %}
+                        {% if c.status != 'Closed' %}
+                        <div class="p-6 hover:bg-indigo-50/50 transition">
+                            <div class="flex justify-between items-start">
+                                <div class="flex gap-4">
+                                    <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0
+                                        {% if c.priority == 'High' %}bg-red-100 text-red-600{% else %}bg-indigo-100 text-indigo-600{% endif %}">
+                                        {% if c.department == 'Electricity' %}<i class="fas fa-bolt"></i>
+                                        {% elif c.department == 'Water' %}<i class="fas fa-faucet"></i>
+                                        {% elif c.department == 'Police' %}<i class="fas fa-shield-alt"></i>
+                                        {% elif c.department == 'Health' %}<i class="fas fa-heartbeat"></i>
+                                        {% else %}<i class="fas fa-city"></i>{% endif %}
+                                    </div>
+                                    
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-xs font-bold text-slate-500 uppercase">{{ c.department }}</span>
+                                            <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                            <span class="text-xs text-slate-400">{{ c.created_at|date:"M d, Y" }}</span>
+                                        </div>
+                                        <h4 class="font-bold text-slate-800 text-lg">{{ c.description }}</h4>
+                                        <p class="text-sm text-slate-500 mt-1"><i class="fas fa-map-pin mr-1"></i> {{ c.location_name }}</p>
+                                        
+                                        <div class="mt-4 flex items-center gap-2 text-xs font-bold">
+                                            <span class="{% if c.status == 'Pending' %}text-indigo-600{% else %}text-slate-400{% endif %}">Reported</span>
+                                            <div class="w-8 h-0.5 {% if c.status != 'Pending' %}bg-green-500{% else %}bg-slate-200{% endif %}"></div>
+                                            <span class="{% if c.status == 'Solved' %}text-green-600{% else %}text-slate-400{% endif %}">Resolved</span>
+                                            <div class="w-8 h-0.5 bg-slate-200"></div>
+                                            <span class="text-slate-400">Verified</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col items-end gap-2">
+                                    {% if c.status == 'Solved' %}
+                                        <div class="bg-green-50 text-green-700 px-3 py-1 rounded-lg text-xs font-bold border border-green-100 mb-2">
+                                            <i class="fas fa-check-circle mr-1"></i> Admin Marked Solved
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <a href="{% url 'verify_close' c.id %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">
+                                                Verify & Close
+                                            </a>
+                                            <a href="{% url 'reopen_complaint' c.id %}" class="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-xs font-bold">
+                                                Not Solved?
+                                            </a>
+                                        </div>
+                                    {% else %}
+                                        <span class="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-xs font-bold">Processing</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                         {% endif %}
-                    </div>
-                </div>
-
-                {% if c.status == 'Solved' %}
-                <div class="mt-6 bg-yellow-50 rounded-xl p-5 border border-yellow-200">
-                    <div class="flex items-start gap-3">
-                        <i class="fas fa-info-circle text-yellow-600 mt-1"></i>
-                        <div>
-                            <p class="font-bold text-yellow-800">Admin has marked this issue as Resolved.</p>
-                            <p class="text-sm text-yellow-700 mt-1">Please confirm if the work is actually done to close this ticket.</p>
+                        {% empty %}
+                        <div class="p-8 text-center text-slate-400">
+                            <i class="fas fa-check-circle text-4xl mb-3 text-slate-200"></i>
+                            <p>All clear! No active complaints.</p>
                         </div>
-                    </div>
-                    <div class="flex gap-3 mt-4 ml-8">
-                        <a href="{% url 'verify_close' c.id %}" class="px-5 py-2 bg-green-600 text-white text-sm font-bold rounded-lg shadow-sm hover:bg-green-700 transition">
-                            <i class="fas fa-check mr-2"></i> Yes, Close Case
-                        </a>
-                        <a href="{% url 'reopen_complaint' c.id %}" class="px-5 py-2 bg-white text-red-600 border border-red-200 text-sm font-bold rounded-lg hover:bg-red-50 transition">
-                            No, Reopen
-                        </a>
+                        {% endfor %}
                     </div>
                 </div>
-                {% endif %}
             </div>
-            {% empty %}
-            <div class="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
-                <i class="fas fa-clipboard-check text-4xl text-slate-300 mb-4"></i>
-                <p class="text-slate-500">No reports found.</p>
-            </div>
-            {% endfor %}
-        </div>
 
-    </div>
+            <div x-show="currentTab === 'new_case'" class="fade-in max-w-2xl mx-auto" x-cloak>
+                <div class="bg-white p-8 rounded-2xl shadow-lg border border-indigo-100">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-6">File New Complaint</h3>
+                    
+                    <form action="{% url 'submit_complaint' %}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                        {% csrf_token %}
+                        
+                        <div>
+                            <label class="block text-sm font-bold text-slate-600 mb-2">Describe the Issue</label>
+                            <textarea name="description" rows="3" placeholder="E.g., Garbage piled up near main market..." class="w-full p-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-indigo-500 focus:bg-white outline-none transition" required></textarea>
+                            <p class="text-xs text-indigo-400 mt-2"><i class="fas fa-robot mr-1"></i> AI will auto-detect department & priority.</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-2">Location Name</label>
+                                <input type="text" name="location_name" placeholder="E.g., MG Road" class="w-full p-3 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-indigo-500 outline-none" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-600 mb-2">Pincode</label>
+                                <input type="text" name="pincode" placeholder="452001" class="w-full p-3 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-indigo-500 outline-none" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold text-slate-600 mb-2">Upload Photo Evidence</label>
+                            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer hover:bg-slate-50 transition group">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <i class="fas fa-cloud-upload-alt text-2xl text-slate-400 group-hover:text-indigo-500 transition"></i>
+                                    <p class="mb-2 text-sm text-slate-500"><span class="font-bold">Click to upload</span></p>
+                                </div>
+                                <input type="file" name="image" class="hidden" />
+                            </label>
+                        </div>
+
+                        <button type="submit" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition transform">
+                            Submit Report <i class="fas fa-paper-plane ml-2"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div x-show="currentTab === 'history'" class="fade-in" x-cloak>
+                <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-indigo-50">
+                        <h3 class="font-bold text-slate-800">My Solved Cases</h3>
+                    </div>
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500">
+                            <tr>
+                                <th class="px-6 py-3">Issue</th>
+                                <th class="px-6 py-3">Department</th>
+                                <th class="px-6 py-3">Date Closed</th>
+                                <th class="px-6 py-3 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            {% for c in complaints %}
+                            {% if c.status == 'Closed' %}
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-6 py-4 font-medium">{{ c.description }}</td>
+                                <td class="px-6 py-4 text-slate-500">{{ c.department }}</td>
+                                <td class="px-6 py-4 text-slate-400">{{ c.created_at|date:"M d, Y" }}</td>
+                                <td class="px-6 py-4 text-right">
+                                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">Closed</span>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% empty %}
+                            <tr><td colspan="4" class="p-8 text-center text-slate-400">No history found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock-time').innerText = now.toLocaleTimeString('en-US', {hour12: false});
+            document.getElementById('clock-date').innerText = now.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        }, 1000);
+    </script>
 </body>
 </html>

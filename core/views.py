@@ -25,7 +25,6 @@ def auth_view(request):
                 role = request.POST.get('role')
                 u = request.POST.get('username')
                 p = request.POST.get('password')
-                # Extra Fields
                 phone = request.POST.get('phone')
                 city = request.POST.get('city')
                 aadhar = request.POST.get('aadhar')
@@ -55,7 +54,7 @@ def update_profile_pic(request):
         request.user.save()
     return redirect('dashboard')
 
-# --- DASHBOARD LOGIC ---
+# --- DASHBOARD LOGIC (Admin + User Updated) ---
 @login_required
 def dashboard_view(request):
     user = request.user
@@ -68,14 +67,13 @@ def dashboard_view(request):
         output_field=IntegerField(),
     )
 
+    # --- ADMIN VIEW ---
     if user.is_department_admin:
-        # 1. Fetch Complaints for THIS Dept (Shared by all admins of this dept)
         complaints = Complaint.objects.filter(department=user.department_name).annotate(sort=priority_order).order_by('sort', '-created_at')
         
-        # 2. Identify Hotspots (Red Zones)
         hotspots = Complaint.objects.filter(department=user.department_name).values('pincode', 'location_name').annotate(total=Count('id')).order_by('-total')[:5]
 
-        # 3. Chart Data Preparation
+        # Admin Chart Data
         p_data = [
             complaints.filter(priority='High').count(),
             complaints.filter(priority='Medium').count(),
@@ -93,11 +91,38 @@ def dashboard_view(request):
             'chart_prio': json.dumps(p_data),
             'chart_status': json.dumps(s_data)
         })
+    
+    # --- USER VIEW (UPDATED) ---
     else:
         complaints = Complaint.objects.filter(user=user).order_by('-created_at')
-        return render(request, 'dash_user.html', {'complaints': complaints})
+        
+        # 1. Stats Calculation
+        total_c = complaints.count()
+        pending_c = complaints.filter(status='Pending').count()
+        solved_c = complaints.filter(status='Solved').count()
+        closed_c = complaints.filter(status='Closed').count()
+        
+        # 2. Gamification (Score: 50 points per closed complaint)
+        impact_score = closed_c * 50
+        
+        # 3. Chart Data
+        # [Pending+Solved (Active), Closed (Done)]
+        active_count = pending_c + solved_c
+        user_chart_data = [active_count, closed_c]
 
-# --- COMPLAINT LOGIC ---
+        return render(request, 'dash_user.html', {
+            'complaints': complaints,
+            'stats': {
+                'total': total_c,
+                'pending': pending_c,
+                'solved': solved_c,
+                'closed': closed_c,
+                'score': impact_score
+            },
+            'chart_data': json.dumps(user_chart_data)
+        })
+
+# --- COMPLAINT ACTIONS ---
 @login_required
 def submit_complaint(request):
     if request.method == 'POST':
@@ -133,12 +158,10 @@ def reopen_complaint(request, id):
         c.save()
     return redirect('dashboard')
 
-# --- NEW: TRANSFER LOGIC ---
 @login_required
 def transfer_complaint(request, id):
     if request.method == 'POST':
         c = get_object_or_404(Complaint, id=id)
-        # Check: Admin must belong to current department of complaint
         if request.user.is_department_admin and request.user.department_name == c.department:
             new_dept = request.POST.get('new_department')
             if new_dept:
