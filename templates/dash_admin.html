@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Admin Panel - Civic AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .glass-sidebar { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); color: white; }
+        .nav-item { cursor: pointer; transition: all 0.3s; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); border-left: 4px solid #3b82f6; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased flex h-screen overflow-hidden" x-data="{ currentTab: 'dashboard' }">
+
+    <aside class="w-64 glass-sidebar flex-shrink-0 flex flex-col transition-all duration-300">
+        <div class="p-6 flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-wide">Civic AI</h1>
+                <p class="text-xs text-slate-400">Admin Console</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 px-4 space-y-2 mt-4">
+            <a @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'active' : ''" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                <i class="fas fa-th-large w-5"></i> Dashboard
+            </a>
+            
+            <a @click="currentTab = 'complaints'" :class="currentTab === 'complaints' ? 'active' : ''" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                <i class="fas fa-tasks w-5"></i> Complaints
+                {% if complaints.count > 0 %}
+                <span class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{{ complaints.count }}</span>
+                {% endif %}
+            </a>
+
+            <a @click="currentTab = 'analytics'" :class="currentTab === 'analytics' ? 'active' : ''" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                <i class="fas fa-chart-pie w-5"></i> Analytics
+            </a>
+
+            <a @click="currentTab = 'officers'" :class="currentTab === 'officers' ? 'active' : ''" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300">
+                <i class="fas fa-users w-5"></i> Officers Team
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-slate-700 bg-slate-900/50">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center font-bold border border-slate-600 text-white">
+                    {{ user.username.0|upper }}
+                </div>
+                <div class="overflow-hidden">
+                    <p class="text-sm font-semibold truncate text-white">{{ user.username }}</p>
+                    <p class="text-xs text-slate-400 truncate">{{ user.department_name }}</p>
+                </div>
+                <a href="{% url 'logout' %}" class="ml-auto text-slate-400 hover:text-red-400 transition" title="Logout">
+                    <i class="fas fa-sign-out-alt text-lg"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-slate-50 relative">
+        
+        <header class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-20 shadow-sm">
+            <h2 class="text-2xl font-bold text-slate-800 capitalize" x-text="currentTab + ' Overview'"></h2>
+            <div class="flex gap-4">
+                <div class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full border">
+                    {{ user.city|default:"Indore" }} Zone
+                </div>
+            </div>
+        </header>
+
+        <div class="p-8">
+            
+            <div x-show="currentTab === 'dashboard'" class="fade-in space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-blue-500">
+                        <p class="text-sm text-slate-500 mb-1">Total Active Issues</p>
+                        <h3 class="text-3xl font-bold text-slate-800">{{ complaints.count }}</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-red-500">
+                        <p class="text-sm text-slate-500 mb-1">High Priority (Red Zones)</p>
+                        <h3 class="text-3xl font-bold text-slate-800">
+                            {{ hotspots.count|default:"0" }}
+                        </h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-green-500">
+                        <p class="text-sm text-slate-500 mb-1">Team Efficiency</p>
+                        <h3 class="text-3xl font-bold text-slate-800">92%</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 font-bold text-slate-700">Recent Complaints</div>
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 border-b">
+                            <tr>
+                                <th class="px-6 py-3">Description</th>
+                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for c in complaints|slice:":5" %}
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-6 py-4 font-medium text-slate-700">{{ c.description|truncatechars:50 }}</td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2 py-1 rounded text-xs font-bold {% if c.status == 'Pending' %}bg-red-100 text-red-600{% else %}bg-green-100 text-green-600{% endif %}">
+                                        {{ c.status }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <button @click="currentTab = 'complaints'" class="text-blue-600 hover:underline">View</button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center py-6 text-slate-400">No recent activity.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div x-show="currentTab === 'complaints'" class="fade-in">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 font-semibold border-b">
+                            <tr>
+                                <th class="px-6 py-3">ID</th>
+                                <th class="px-6 py-3">Issue Detail</th>
+                                <th class="px-6 py-3">Priority</th>
+                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for c in complaints %}
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="px-6 py-4 font-mono text-slate-500">#{{ c.id }}</td>
+                                <td class="px-6 py-4">
+                                    <p class="font-bold text-slate-800">{{ c.description }}</p>
+                                    <p class="text-xs text-slate-500 mt-1"><i class="fas fa-map-marker-alt"></i> {{ c.location_name }} ({{ c.pincode }})</p>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2 py-1 rounded text-xs font-bold
+                                    {% if c.priority == 'High' %}bg-red-100 text-red-700{% elif c.priority == 'Medium' %}bg-orange-100 text-orange-700{% else %}bg-green-100 text-green-700{% endif %}">
+                                    {{ c.priority }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if c.status == 'Pending' %}
+                                        <span class="text-red-600 font-bold text-xs"><i class="fas fa-circle text-[8px] mr-1"></i> Pending</span>
+                                    {% elif c.status == 'Solved' %}
+                                        <span class="text-yellow-600 font-bold text-xs"><i class="fas fa-clock mr-1"></i> Waiting User</span>
+                                    {% else %}
+                                        <span class="text-green-600 font-bold text-xs"><i class="fas fa-check-circle mr-1"></i> Closed</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    {% if c.status == 'Pending' %}
+                                        <a href="{% url 'mark_solved' c.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow">
+                                            Mark Solved
+                                        </a>
+                                    {% elif c.status == 'Solved' %}
+                                        <span class="text-slate-400 text-xs italic">Pending verify</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center py-10 text-slate-400">All caught up! No complaints.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div x-show="currentTab === 'analytics'" class="fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-4">Weekly Complaints</h3>
+                        <canvas id="barChart"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-4">Priority Distribution</h3>
+                        <canvas id="pieChart" style="max-height: 250px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="currentTab === 'officers'" class="fade-in">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="font-bold text-lg mb-4">Department Officers</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">AS</div>
+                                <div>
+                                    <p class="font-bold text-sm">Amit Sharma</p>
+                                    <p class="text-xs text-slate-500">Senior Engineer</p>
+                                </div>
+                            </div>
+                            <span class="text-green-600 text-xs font-bold">Active</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center text-pink-600 font-bold">RJ</div>
+                                <div>
+                                    <p class="font-bold text-sm">Riya Jain</p>
+                                    <p class="text-xs text-slate-500">Field Inspector</p>
+                                </div>
+                            </div>
+                            <span class="text-slate-400 text-xs font-bold">Offline</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Init Charts when page loads
+        document.addEventListener('alpine:init', () => {
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Complaints',
+                        data: [12, 19, 3, 5, 2, 3, 10],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 5
+                    }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['High', 'Medium', 'Low'],
+                    datasets: [{
+                        data: [5, 15, 8],
+                        backgroundColor: ['#ef4444', '#f97316', '#22c55e']
+                    }]
+                }
+            });
+        });
+    </script>
+</body>
+</html>
