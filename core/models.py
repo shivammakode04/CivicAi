@@ -1,39 +1,69 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+import random
 
 class User(AbstractUser):
-    # Basic Role Flags
+    # Role & Location
     is_department_admin = models.BooleanField(default=False)
     department_name = models.CharField(max_length=50, blank=True, null=True)
+    city = models.CharField(max_length=50, default="Indore") 
     
-    # --- NEW DETAILED FIELDS FOR SIGNUP ---
+    # Profile Data
     phone = models.CharField(max_length=15, blank=True, null=True)
-    aadhar_id = models.CharField(max_length=12, blank=True, null=True) # Aadhar Number
-    address = models.TextField(blank=True, null=True)                  # Full Address
-    gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], default='Male')
-    dob = models.DateField(blank=True, null=True)                      # Date of Birth
-    city = models.CharField(max_length=50, default="Indore")
+    aadhar_id = models.CharField(max_length=12, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    gender = models.CharField(max_length=10, blank=True, null=True)
+    dob = models.DateField(blank=True, null=True)
     profile_pic = models.ImageField(upload_to='profiles/', blank=True, null=True)
 
 class Complaint(models.Model):
-    STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Solved', 'Resolved (Waiting Verification)'),
-        ('Closed', 'Closed (Verified)')
-    ]
+    STATUS_CHOICES = [('Pending', 'Pending'), ('Solved', 'Solved'), ('Closed', 'Closed')]
     PRIORITY_CHOICES = [('High', 'High'), ('Medium', 'Medium'), ('Low', 'Low')]
+
+    # Smart Ticket ID (e.g. 10492)
+    ticket_id = models.IntegerField(unique=True, blank=True, null=True)
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     description = models.TextField()
     location_name = models.CharField(max_length=200)
     pincode = models.CharField(max_length=10)
+    city = models.CharField(max_length=50) # Snapshot of city
     image = models.ImageField(upload_to='complaints/', blank=True, null=True)
     
     department = models.CharField(max_length=50) 
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='Low')
-    
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Pending')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Geo & Feedback
+    latitude = models.FloatField(blank=True, null=True)
+    longitude = models.FloatField(blank=True, null=True)
+    rating = models.IntegerField(default=0)
+    feedback = models.TextField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        # 1. Generate ID if not present
+        if not self.ticket_id:
+            prefix = 90
+            if self.department == 'Municipal': prefix = 10
+            elif self.department == 'Police': prefix = 20
+            elif self.department == 'Electricity': prefix = 30
+            elif self.department == 'Health': prefix = 40
+            elif self.department == 'Water': prefix = 50
+            elif self.department == 'PWD': prefix = 60
+            self.ticket_id = int(f"{prefix}{random.randint(100, 999)}")
+
+        # 2. Auto-fill City from User
+        if not self.city and self.user:
+            self.city = self.user.city
+            
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.pincode} - {self.description[:20]}"
+        return f"#{self.ticket_id} - {self.description[:20]}"
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    message = models.CharField(max_length=255)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
