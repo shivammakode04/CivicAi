@@ -97,27 +97,93 @@
                 </div>
             </div>
 
-            <div x-show="tab === 'new'" x-cloak class="h-[500px]">
+            <div x-show="tab === 'new'" x-cloak class="h-[500px]" x-data="{ useManual: false }">
                 <div class="glass-card h-full flex flex-col md:flex-row overflow-hidden shadow-xl">
                     <div class="w-full md:w-1/2 p-8 overflow-y-auto">
                         <h3 class="text-xl font-bold text-slate-800 mb-1">File Report</h3>
-                        <p class="text-xs text-slate-400 mb-6">Pin location on map for auto-fill.</p>
+                        <p class="text-xs text-slate-400 mb-6">Pin location on map or enter details manually.</p>
+                        
+                        <!-- TOGGLE FOR MANUAL/AUTO -->
+                        <div class="mb-6 flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+                            <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                <input type="radio" @change="useManual = false" :checked="!useManual" class="w-4 h-4">
+                                <span class="text-xs font-bold text-slate-700">Auto-fill from Map</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer flex-1">
+                                <input type="radio" @change="useManual = true" :checked="useManual" class="w-4 h-4">
+                                <span class="text-xs font-bold text-slate-700">Manual Entry</span>
+                            </label>
+                        </div>
+
                         <form action="{% url 'submit_complaint' %}" method="POST" enctype="multipart/form-data" class="space-y-5">
                             {% csrf_token %}
                             <div><label class="text-xs font-bold text-slate-500 uppercase">Description</label><textarea name="description" rows="3" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none" placeholder="Describe issue..." required></textarea></div>
+                            
+                            <!-- AUTO-FILL FIELDS (Hidden in manual mode) -->
+                            <template x-if="!useManual">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Area</label><input type="text" id="loc" name="location_name" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none" placeholder="Click on map" readonly></div>
+                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Pincode</label><input type="text" id="pin" name="pincode" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none" placeholder="Auto" readonly></div>
+                                </div>
+                            </template>
+
+                            <!-- MANUAL ENTRY FIELDS (Hidden in auto mode) -->
+                            <template x-if="useManual">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Area/Location</label><input type="text" id="loc-manual" name="location_name" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none" placeholder="Enter area name"></div>
+                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Pincode</label><input type="text" id="pin-manual" name="pincode" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none" placeholder="e.g., 452001"></div>
+                                </div>
+                            </template>
+
                             <div class="grid grid-cols-2 gap-4">
-                                <div><label class="text-xs font-bold text-slate-500 uppercase">Area</label><input type="text" id="loc" name="location_name" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200" readonly></div>
-                                <div><label class="text-xs font-bold text-slate-500 uppercase">Pincode</label><input type="text" id="pin" name="pincode" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200" readonly></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase">Latitude</label><input type="number" id="lat" name="latitude" step="0.000001" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none" placeholder="Optional"></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase">Longitude</label><input type="number" id="lng" name="longitude" step="0.000001" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none" placeholder="Optional"></div>
                             </div>
-                            <input type="file" name="image" class="block w-full text-xs text-slate-500">
-                            <input type="hidden" name="latitude" id="lat"><input type="hidden" name="longitude" id="lng">
-                            <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg">Submit Complaint</button>
+
+                            <div><label class="text-xs font-bold text-slate-500 uppercase">Attach Image</label><input type="file" name="image" accept="image/*" class="block w-full text-xs text-slate-500 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 file:font-bold"></div>
+                            
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5">
+                                <i class="fas fa-paper-plane mr-2"></i>Submit Complaint
+                            </button>
                         </form>
                     </div>
-                    <div class="w-full md:w-1/2 relative bg-slate-100">
-                        <div id="userMap"></div>
-                        <button onclick="useCurrentLocation()" class="absolute bottom-4 left-4 z-[999] bg-white text-indigo-600 px-4 py-2 rounded-lg text-xs font-bold shadow-lg"><i class="fas fa-crosshairs mr-1"></i> Use My Location</button>
-                    </div>
+
+                    <!-- MAP SECTION (Only visible in auto mode) -->
+                    <template x-if="!useManual">
+                        <div class="w-full md:w-1/2 relative bg-slate-100">
+                            <div id="userMap"></div>
+                            <button onclick="useCurrentLocation()" class="absolute bottom-4 left-4 z-[999] bg-white text-indigo-600 px-4 py-2 rounded-lg text-xs font-bold shadow-lg border border-indigo-200 hover:shadow-xl transition">
+                                <i class="fas fa-crosshairs mr-1"></i> Use My Location
+                            </button>
+                            <div class="absolute top-4 left-4 bg-white rounded-lg p-3 shadow-lg border border-indigo-100 text-[11px] max-w-xs">
+                                <p class="font-bold text-slate-800 mb-1">📍 How to use:</p>
+                                <p class="text-slate-600">Click on the map to mark your location, or tap "Use My Location" for auto-detection.</p>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- INSTRUCTIONS (Only visible in manual mode) -->
+                    <template x-if="useManual">
+                        <div class="w-full md:w-1/2 bg-gradient-to-br from-indigo-50 to-purple-50 p-8 flex flex-col justify-center items-center text-center">
+                            <div class="text-6xl mb-4">✏️</div>
+                            <h4 class="text-lg font-bold text-slate-800 mb-2">Manual Entry Mode</h4>
+                            <p class="text-sm text-slate-600 mb-6">Enter your location details manually. Latitude and longitude are optional.</p>
+                            <div class="space-y-2 text-left">
+                                <div class="bg-white rounded-lg p-3 border-l-4 border-indigo-500">
+                                    <p class="text-[11px] font-bold text-slate-700">📍 Area/Location</p>
+                                    <p class="text-[10px] text-slate-500">e.g., Rajwada Area, Near Hospital</p>
+                                </div>
+                                <div class="bg-white rounded-lg p-3 border-l-4 border-indigo-500">
+                                    <p class="text-[11px] font-bold text-slate-700">🔢 Pincode</p>
+                                    <p class="text-[10px] text-slate-500">e.g., 452001 (6-digit Indian postal code)</p>
+                                </div>
+                                <div class="bg-white rounded-lg p-3 border-l-4 border-purple-500">
+                                    <p class="text-[11px] font-bold text-slate-700">📌 Coordinates (Optional)</p>
+                                    <p class="text-[10px] text-slate-500">Enter latitude & longitude for precision</p>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
@@ -128,24 +194,68 @@
         function initMap() {
             if(map){map.invalidateSize(); return;}
             map = L.map('userMap').setView([20, 78], 5);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q={{ user.city }}`).then(r=>r.json()).then(d=>{if(d.length) map.setView([d[0].lat, d[0].lon], 13);});
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Center map on user's city
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q={{ user.city }}`).then(r=>r.json()).then(d=>{
+                if(d.length) {
+                    map.setView([parseFloat(d[0].lat), parseFloat(d[0].lon)], 13);
+                }
+            }).catch(e => console.log('City lookup failed:', e));
+            
             map.on('click', e=>{ setLoc(e.latlng.lat, e.latlng.lng); });
             setTimeout(()=>map.invalidateSize(), 300);
         }
+
         function useCurrentLocation() {
             if(navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(p=>{ setLoc(p.coords.latitude, p.coords.longitude); map.flyTo([p.coords.latitude, p.coords.longitude], 16); });
+                navigator.geolocation.getCurrentPosition(
+                    p=>{ 
+                        setLoc(p.coords.latitude, p.coords.longitude); 
+                        map.flyTo([p.coords.latitude, p.coords.longitude], 16); 
+                    },
+                    err => alert('Location access denied. Please enable location permissions.')
+                );
+            } else {
+                alert('Geolocation is not supported by your browser.');
             }
         }
+
         function setLoc(lat, lng) {
             if(marker) map.removeLayer(marker);
-            marker = L.marker([lat,lng]).addTo(map);
-            document.getElementById('lat').value=lat; document.getElementById('lng').value=lng;
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`).then(r=>r.json()).then(d=>{
-                document.getElementById('loc').value = d.address.road||d.address.suburb||"Area";
-                document.getElementById('pin').value = d.address.postcode||"";
-            });
+            marker = L.marker([lat, lng], {
+                icon: L.icon({
+                    iconUrl: 'https://cdn-icons-png.flaticon.com/512/747/747376.png',
+                    iconSize: [32, 32],
+                    shadowSize: [32, 32],
+                    iconAnchor: [16, 32],
+                    shadowAnchor: [16, 32]
+                })
+            }).addTo(map);
+            
+            document.getElementById('lat').value = lat.toFixed(6); 
+            document.getElementById('lng').value = lng.toFixed(6);
+            
+            // Reverse geocoding to get address
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                .then(r=>r.json())
+                .then(d=>{
+                    const address = d.address;
+                    const area = address.road || address.suburb || address.village || address.town || "Area";
+                    const postcode = address.postcode || "";
+                    
+                    document.getElementById('loc').value = area;
+                    document.getElementById('pin').value = postcode;
+                    
+                    console.log('Location set:', {area, postcode, lat, lng});
+                })
+                .catch(e => {
+                    console.log('Address lookup failed:', e);
+                    // Fallback: at least set coordinates
+                    document.getElementById('loc').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                });
         }
     </script>
 </body>

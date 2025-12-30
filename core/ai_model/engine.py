@@ -47,8 +47,8 @@ class CivicAI:
 
     def predict(self, text):
         text_lower = text.lower()
-        predicted_dept = "Municipal" # Default
-        predicted_prio = "Low"     # Default
+        predicted_dept = "Municipal"  # Default
+        predicted_prio = "Low"        # Default
 
         # 1. PRIORITY DETECTION (Keyword is safest)
         for word in self.priority_keywords['High']:
@@ -61,13 +61,29 @@ class CivicAI:
                     predicted_prio = "Medium"
                     break
         
-        # 2. DEPARTMENT DETECTION (ML + Fallback)
+        # 2. DEPARTMENT DETECTION (ML + Fallback + Mapping)
+        ml_prediction = None
         if self.model:
             try:
-                predicted_dept = self.model.predict([text])[0]
-            except: pass
+                ml_prediction = self.model.predict([text])[0]
+                # Map ML predictions to our department names
+                dept_mapping = {
+                    'Municipality': 'Municipal',
+                    'Electricity': 'Electricity',
+                    'Water': 'Water',
+                    'Police': 'Police',
+                    'Police/Traffic': 'Police',
+                    'PWD': 'PWD',
+                    'Health': 'Health',
+                    'Health Department': 'Health',
+                    'Fire': 'Fire',
+                    'Municipal': 'Municipal'
+                }
+                predicted_dept = dept_mapping.get(ml_prediction, "Municipal")
+            except: 
+                pass
         
-        # Fallback Check
+        # 3. FALLBACK KEYWORD CHECK (If ML fails or low confidence)
         found_keyword = False
         for dept, keywords in self.dept_keywords.items():
             for word in keywords:

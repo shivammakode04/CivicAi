@@ -72,7 +72,9 @@ def update_profile_pic(request):
 def profile_view(request):
     user = request.user
     if user.is_department_admin:
-        return render(request, 'admin_profile.html', {'user': user})
+        # Show admin's department complaints
+        complaints = Complaint.objects.filter(department=user.department_name, city__iexact=user.city).order_by('-created_at')
+        return render(request, 'admin_profile.html', {'user': user, 'complaints': complaints})
     else:
         return render(request, 'profile.html', {'user': user})
 
@@ -103,6 +105,7 @@ def dashboard_view(request):
     # ADMIN VIEW
     if user.is_department_admin:
         complaints = Complaint.objects.filter(department=user.department_name, city__iexact=user.city).annotate(sort=priority_order).order_by('sort', '-created_at')
+        active_complaints = complaints.exclude(status='Closed')  # Active cases only
         hotspots = complaints.values('pincode', 'location_name').annotate(total=Count('id')).order_by('-total')[:5]
         avg_rating = complaints.aggregate(Avg('rating'))['rating__avg'] or 0
         map_data = list(complaints.exclude(latitude__isnull=True).exclude(status='Closed').values('ticket_id', 'description', 'latitude', 'longitude', 'priority', 'status', 'user__username', 'user__phone'))
@@ -111,7 +114,15 @@ def dashboard_view(request):
         s_data = [complaints.filter(status='Pending').count(), complaints.filter(status='Solved').count(), complaints.filter(status='Closed').count()]
 
         return render(request, 'dash_admin.html', {
-            'complaints': complaints, 'hotspots': hotspots, 'chart_prio': json.dumps(p_data), 'chart_status': json.dumps(s_data), 'map_data': json.dumps(map_data), 'avg_rating': round(avg_rating, 1), 'notifs': notifs, 'unread_count': unread_count
+            'complaints': complaints, 
+            'active_count': active_complaints.count(),
+            'hotspots': hotspots, 
+            'chart_prio': json.dumps(p_data), 
+            'chart_status': json.dumps(s_data), 
+            'map_data': json.dumps(map_data), 
+            'avg_rating': round(avg_rating, 1), 
+            'notifs': notifs, 
+            'unread_count': unread_count
         })
 
     # USER VIEW

@@ -26,7 +26,8 @@
         </div>
         <nav class="p-4 space-y-2 flex-1">
             <a @click="tab='dash'; setTimeout(initMap, 300)" :class="tab=='dash'?'active bg-slate-800 text-white':''" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-slate-800 hover:text-white transition"><i class="fas fa-th-large w-5"></i> Dashboard</a>
-            <a @click="tab='cases'" :class="tab=='cases'?'active bg-slate-800 text-white':''" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-slate-800 hover:text-white transition"><i class="fas fa-folder-open w-5"></i> Case Files <span class="ml-auto bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full">{{ complaints.count }}</span></a>
+            <a @click="tab='cases'" :class="tab=='cases'?'active bg-slate-800 text-white':''" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-slate-800 hover:text-white transition"><i class="fas fa-folder-open w-5"></i> Active Cases <span class="ml-auto bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full">{{ active_count }}</span></a>
+            <a @click="tab='history'" :class="tab=='history'?'active bg-slate-800 text-white':''" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-slate-800 hover:text-white transition"><i class="fas fa-history w-5"></i> History <span class="ml-auto bg-slate-700 text-white text-[10px] px-2 py-0.5 rounded-full">{{ complaints.count }}</span></a>
             <a href="{% url 'profile_view' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-slate-800 hover:text-white transition"><i class="fas fa-user-cog w-5"></i> Settings</a>
         </nav>
         <div class="p-4 bg-slate-900/50 border-t border-slate-700 flex items-center gap-3">
@@ -38,7 +39,7 @@
 
     <main class="flex-1 overflow-y-auto">
         <header class="bg-white/80 backdrop-blur border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-30">
-            <h2 class="text-2xl font-bold text-slate-800 capitalize" x-text="tab == 'dash' ? 'Command Center' : 'Case Management'"></h2>
+            <h2 class="text-2xl font-bold text-slate-800 capitalize" x-text="tab == 'dash' ? 'Command Center' : tab == 'cases' ? 'Active Case Management' : 'Complaint History'"></h2>
             <div class="flex items-center gap-4">
                 <div class="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 text-xs font-bold flex items-center gap-2"><span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> {{ user.city }} Live</div>
                 <div x-data="{ open: false }" class="relative">
@@ -112,6 +113,62 @@
                                 </td>
                             </tr>
                             {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div x-show="tab === 'history'" x-cloak>
+                <div class="glass-card overflow-hidden">
+                    <div class="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                        <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="fas fa-history text-blue-500"></i> Complete Complaint History</h3>
+                        <p class="text-xs text-slate-500 mt-1">All complaints for {{ user.department_name }} in {{ user.city }} (including closed cases)</p>
+                    </div>
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-slate-50 text-slate-500 font-semibold border-b"><tr><th class="px-6 py-4">Ticket</th><th class="px-6 py-4">Description</th><th class="px-6 py-4">Priority</th><th class="px-6 py-4">Status</th><th class="px-6 py-4">Filed By</th><th class="px-6 py-4">Date</th><th class="px-6 py-4">Rating</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for c in complaints %}
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="px-6 py-4">
+                                    <span class="inline-block bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold">#{{ c.ticket_id }}</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <p class="font-semibold text-slate-800">{{ c.description|truncatechars:50 }}</p>
+                                    <p class="text-xs text-slate-500 mt-0.5"><i class="fas fa-map-pin mr-1"></i>{{ c.location_name }}</p>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-1 rounded-full text-xs font-bold {% if c.priority == 'High' %}bg-red-100 text-red-700{% elif c.priority == 'Medium' %}bg-yellow-100 text-yellow-700{% else %}bg-green-100 text-green-700{% endif %}">
+                                        {{ c.priority }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-1 rounded-full text-xs font-bold {% if c.status == 'Pending' %}bg-blue-100 text-blue-700{% elif c.status == 'Solved' %}bg-purple-100 text-purple-700{% else %}bg-slate-100 text-slate-700{% endif %}">
+                                        {{ c.status }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs">{{ c.user.username.0|upper }}</div>
+                                        <span class="text-slate-700 font-semibold">@{{ c.user.username }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-slate-600 text-xs">{{ c.created_at|date:"M d, Y" }}</td>
+                                <td class="px-6 py-4">
+                                    {% if c.rating %}
+                                        <span class="text-yellow-500 font-bold">{{ c.rating }}/5 <i class="fas fa-star"></i></span>
+                                    {% else %}
+                                        <span class="text-slate-400 text-xs">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="px-6 py-12 text-center">
+                                    <i class="fas fa-inbox text-5xl text-slate-200 mb-4 block"></i>
+                                    <p class="text-slate-500 font-semibold">No complaints found for {{ user.department_name }}</p>
+                                </td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
