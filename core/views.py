@@ -86,16 +86,28 @@ def dashboard_view(request):
         })
 
     # USER VIEW
+   # --- USER VIEW ---
     else:
         complaints = Complaint.objects.filter(user=user).order_by('-created_at')
         closed_count = complaints.filter(status='Closed').count()
-        level = "Rookie"
-        if closed_count > 5: level = "Guardian"
-        if closed_count > 15: level = "City Hero"
+        
+        # NEW PROFESSIONAL LOGIC
+        level = "Active Resident"          # Level 1 (Entry)
+        if closed_count > 5: 
+            level = "Civic Steward"        # Level 2 (Intermediate)
+        if closed_count > 15: 
+            level = "Community Ambassador" # Level 3 (Top Tier)
 
-        stats = {'total': complaints.count(), 'pending': complaints.filter(status='Pending').count(), 'solved': complaints.filter(status='Solved').count(), 'closed': closed_count, 'level': level}
-        return render(request, 'dash_user.html', {'complaints': complaints, 'stats': stats, 'notifs': notifs, 'unread_count': unread_count})
-
+        stats = {
+            'total': complaints.count(),
+            'pending': complaints.filter(status='Pending').count(),
+            'solved': complaints.filter(status='Solved').count(),
+            'closed': closed_count,
+            'level': level
+        }
+        return render(request, 'dash_user.html', {
+            'complaints': complaints, 'stats': stats, 'notifs': notifs, 'unread_count': unread_count
+        })
 # --- COMPLAINT ACTIONS ---
 @login_required
 def submit_complaint(request):
