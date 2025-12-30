@@ -106,8 +106,15 @@ def dashboard_view(request):
     if user.is_department_admin:
         complaints = Complaint.objects.filter(department=user.department_name, city__iexact=user.city).annotate(sort=priority_order).order_by('sort', '-created_at')
         active_complaints = complaints.exclude(status='Closed')  # Active cases only
+        closed_complaints = complaints.filter(status='Closed')
+        fully_resolved = closed_complaints.filter(resolution='Fully Resolved').count()
+        
+        # Calculate resolution percentage
+        resolved_percentage = 0
+        if closed_complaints.count() > 0:
+            resolved_percentage = int((fully_resolved / closed_complaints.count()) * 100)
+        
         hotspots = complaints.values('pincode', 'location_name').annotate(total=Count('id')).order_by('-total')[:5]
-        avg_rating = complaints.aggregate(Avg('rating'))['rating__avg'] or 0
         map_data = list(complaints.exclude(latitude__isnull=True).exclude(status='Closed').values('ticket_id', 'description', 'latitude', 'longitude', 'priority', 'status', 'user__username', 'user__phone'))
         
         p_data = [complaints.filter(priority='High').count(), complaints.filter(priority='Medium').count(), complaints.filter(priority='Low').count()]
@@ -116,11 +123,11 @@ def dashboard_view(request):
         return render(request, 'dash_admin.html', {
             'complaints': complaints, 
             'active_count': active_complaints.count(),
+            'resolved_percentage': resolved_percentage,
             'hotspots': hotspots, 
             'chart_prio': json.dumps(p_data), 
             'chart_status': json.dumps(s_data), 
             'map_data': json.dumps(map_data), 
-            'avg_rating': round(avg_rating, 1), 
             'notifs': notifs, 
             'unread_count': unread_count
         })
@@ -155,10 +162,21 @@ def submit_complaint(request):
         desc = request.POST.get('description'); loc = request.POST.get('location_name'); pin = request.POST.get('pincode')
         img = request.FILES.get('image'); lat = request.POST.get('latitude') or None; lng = request.POST.get('longitude') or None
         
-        dept, prio = ai_bot.predict(desc)
-        # Fix: Default rating=0 to prevent DB error
-        Complaint.objects.create(user=request.user, description=desc, location_name=loc, pincode=pin, image=img, department=dept, priority=prio, latitude=lat, longitude=lng, city=request.user.city, rating=0)
-        send_notif(request.user, f"Complaint submitted! Assigned to {dept}.")
+        # Improved AI prediction with confidence score
+        dept, prio, confidence = ai_bot.predict(desc)
+        Complaint.objects.create(
+            user=request.user, 
+            description=desc, 
+            location_name=loc, 
+            pincode=pin, 
+            image=img, 
+            department=dept, 
+            priority=prio, 
+            latitude=lat, 
+            longitude=lng, 
+            city=request.user.city
+        )
+        send_notif(request.user, f"✅ Complaint submitted! Assigned to {dept} (Confidence: {confidence*100:.0f}%)")
     return redirect('dashboard')
 
 @login_required
@@ -174,14 +192,14 @@ def verify_close(request, id):
     c = get_object_or_404(Complaint, id=id)
     if c.user == request.user:
         if request.method == 'POST':
-            # FIX: If rating is empty, default to 5. Stops IntegrityError (1048)
-            rating_val = request.POST.get('rating')
-            c.rating = int(rating_val) if rating_val else 5 
+            # Get resolution status from form
+            resolution = request.POST.get('resolution')
+            c.resolution = resolution
             
             c.feedback = request.POST.get('feedback')
             c.status = 'Closed'
             c.save()
-            send_notif(c.user, f"Ticket #{c.ticket_id} Closed. +50 XP!")
+            send_notif(c.user, f"Ticket #{c.ticket_id} Closed. Thank you for your feedback!")
     return redirect('dashboard')
 
 @login_required

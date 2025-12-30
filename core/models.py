@@ -19,6 +19,7 @@ class User(AbstractUser):
 class Complaint(models.Model):
     STATUS_CHOICES = [('Pending', 'Pending'), ('Solved', 'Solved'), ('Closed', 'Closed')]
     PRIORITY_CHOICES = [('High', 'High'), ('Medium', 'Medium'), ('Low', 'Low')]
+    RESOLUTION_CHOICES = [('Fully Resolved', 'Fully Resolved'), ('Partially Resolved', 'Partially Resolved'), ('Not Resolved', 'Not Resolved')]
 
     # Smart Ticket ID (e.g. 10492)
     ticket_id = models.IntegerField(unique=True, blank=True, null=True)
@@ -38,7 +39,7 @@ class Complaint(models.Model):
     # Geo & Feedback
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
-    rating = models.IntegerField(default=0)
+    resolution = models.CharField(max_length=20, choices=RESOLUTION_CHOICES, blank=True, null=True)
     feedback = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):

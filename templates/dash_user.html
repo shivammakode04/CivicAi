@@ -16,7 +16,7 @@
         [x-cloak] { display: none; }
     </style>
 </head>
-<body class="bg-indigo-50 font-sans antialiased flex h-screen overflow-hidden" x-data="{ tab: 'dash' }">
+<body class="bg-indigo-50 font-sans antialiased flex h-screen overflow-hidden" x-data="{ tab: 'dash', showVerifyModal: false, selectedComplaintId: null }">
 
     <aside class="w-72 sidebar-grad text-indigo-100 flex flex-col shadow-2xl z-20">
         <div class="p-6 border-b border-indigo-800/50 flex items-center gap-3">
@@ -79,13 +79,9 @@
                                     {% csrf_token %}
                                     <button class="border border-red-200 text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg text-xs font-bold transition">Reopen</button>
                                 </form>
-                                <form method="POST" action="{% url 'verify_close' c.id %}">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="rating" value="5">
-                                    <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md shadow-green-200 transition">
-                                        <i class="fas fa-check-circle mr-1"></i> Verify
-                                    </button>
-                                </form>
+                                <button @click="showVerifyModal = true; selectedComplaintId = {{ c.id }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md shadow-green-200 transition">
+                                    <i class="fas fa-check-circle mr-1"></i> Verify & Close
+                                </button>
                             {% elif c.status == 'Pending' %}
                                 <span class="text-xs font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full">Processing</span>
                             {% else %}
@@ -188,6 +184,66 @@
             </div>
         </div>
     </main>
+
+    <!-- VERIFICATION MODAL -->
+    <div x-show="showVerifyModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" x-cloak>
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden" @click.outside="showVerifyModal = false">
+            <div class="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="fas fa-check-circle"></i> Verify Resolution
+                </h2>
+                <p class="text-green-100 text-sm mt-1">Confirm the status of your complaint resolution</p>
+            </div>
+
+            <form :action="`/verify/${selectedComplaintId}/`" method="POST" class="p-6 space-y-6">
+                {% csrf_token %}
+
+                <!-- RESOLUTION STATUS -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-3">Was your complaint resolved?</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 p-3 border-2 border-transparent rounded-lg cursor-pointer hover:bg-green-50 transition" :class="{'border-green-500 bg-green-50': document.querySelector('input[name=resolution]:checked')?.value === 'Fully Resolved'}">
+                            <input type="radio" name="resolution" value="Fully Resolved" required class="w-4 h-4 text-green-600">
+                            <div>
+                                <p class="font-semibold text-slate-800">✅ Fully Resolved</p>
+                                <p class="text-xs text-slate-500">The issue was completely fixed</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border-2 border-transparent rounded-lg cursor-pointer hover:bg-yellow-50 transition" :class="{'border-yellow-500 bg-yellow-50': document.querySelector('input[name=resolution]:checked')?.value === 'Partially Resolved'}">
+                            <input type="radio" name="resolution" value="Partially Resolved" required class="w-4 h-4 text-yellow-600">
+                            <div>
+                                <p class="font-semibold text-slate-800">⚠️ Partially Resolved</p>
+                                <p class="text-xs text-slate-500">Some progress but not completely fixed</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border-2 border-transparent rounded-lg cursor-pointer hover:bg-red-50 transition" :class="{'border-red-500 bg-red-50': document.querySelector('input[name=resolution]:checked')?.value === 'Not Resolved'}">
+                            <input type="radio" name="resolution" value="Not Resolved" required class="w-4 h-4 text-red-600">
+                            <div>
+                                <p class="font-semibold text-slate-800">❌ Not Resolved</p>
+                                <p class="text-xs text-slate-500">The issue still exists, needs follow-up</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- FEEDBACK -->
+                <div>
+                    <label for="feedback" class="block text-sm font-bold text-slate-700 mb-2">Additional Comments (Optional)</label>
+                    <textarea name="feedback" id="feedback" rows="3" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition" placeholder="Share any details about the resolution..."></textarea>
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="flex gap-3">
+                    <button type="button" @click="showVerifyModal = false" class="flex-1 px-4 py-2 rounded-lg font-semibold text-slate-600 border-2 border-slate-200 hover:bg-slate-50 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg transition transform hover:-translate-y-0.5">
+                        <i class="fas fa-check mr-2"></i> Submit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script>
         let map, marker;
