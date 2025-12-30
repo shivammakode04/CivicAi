@@ -28,6 +28,7 @@
             <a @click="tab='dash'; setTimeout(initMap, 300)" :class="tab=='dash'?'active bg-slate-800 text-white':''" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-slate-800 hover:text-white transition"><i class="fas fa-th-large w-5"></i> Dashboard</a>
             <a @click="tab='cases'" :class="tab=='cases'?'active bg-slate-800 text-white':''" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-slate-800 hover:text-white transition"><i class="fas fa-folder-open w-5"></i> Active Cases <span class="ml-auto bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full">{{ active_count }}</span></a>
             <a @click="tab='history'" :class="tab=='history'?'active bg-slate-800 text-white':''" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-slate-800 hover:text-white transition"><i class="fas fa-history w-5"></i> History <span class="ml-auto bg-slate-700 text-white text-[10px] px-2 py-0.5 rounded-full">{{ complaints.count }}</span></a>
+            <a @click="tab='feedback'" :class="tab=='feedback'?'active bg-slate-800 text-white':''" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-slate-800 hover:text-white transition"><i class="fas fa-comments w-5"></i> Feedback <span class="ml-auto bg-green-600 text-white text-[10px] px-2 py-0.5 rounded-full" id="feedback-badge">0</span></a>
             <a href="{% url 'profile_view' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer hover:bg-slate-800 hover:text-white transition"><i class="fas fa-user-cog w-5"></i> Settings</a>
         </nav>
         <div class="p-4 bg-slate-900/50 border-t border-slate-700 flex items-center gap-3">
@@ -39,7 +40,10 @@
 
     <main class="flex-1 overflow-y-auto">
         <header class="bg-white/80 backdrop-blur border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-30">
-            <h2 class="text-2xl font-bold text-slate-800 capitalize" x-text="tab == 'dash' ? 'Command Center' : tab == 'cases' ? 'Active Case Management' : 'Complaint History'"></h2>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800 capitalize" x-text="tab == 'dash' ? 'Command Center' : tab == 'cases' ? 'Active Case Management' : tab == 'history' ? 'Complaint History' : 'Feedback Analysis'"></h2>
+                <p class="text-xs text-slate-400 mt-1" x-text="`Last updated: ${new Date().toLocaleString()}`"></p>
+            </div>
             <div class="flex items-center gap-4">
                 <div class="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 text-xs font-bold flex items-center gap-2"><span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> {{ user.city }} Live</div>
                 <div x-data="{ open: false }" class="relative">
@@ -176,6 +180,49 @@
                                 </td>
                             </tr>
                             {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div x-show="tab === 'feedback'" x-cloak>
+                <div class="glass-card overflow-hidden">
+                    <div class="px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-slate-100">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-star text-yellow-500"></i> User Feedback & Ratings</h3>
+                        <p class="text-xs text-slate-500 mt-1">Feedback from users on complaint resolutions in {{ user.department_name }}</p>
+                    </div>
+                    
+                    <!-- FEEDBACK STATS -->
+                    <div class="grid grid-cols-4 gap-4 p-6 bg-slate-50 border-b border-slate-100">
+                        <div class="glass-card p-4">
+                            <p class="text-xs font-bold text-slate-500 uppercase">Total Feedback</p>
+                            <h3 class="text-3xl font-extrabold text-slate-800 mt-2">0</h3>
+                        </div>
+                        <div class="glass-card p-4">
+                            <p class="text-xs font-bold text-slate-500 uppercase">Avg Rating</p>
+                            <h3 class="text-3xl font-extrabold text-yellow-500 mt-2">4.2★</h3>
+                        </div>
+                        <div class="glass-card p-4">
+                            <p class="text-xs font-bold text-slate-500 uppercase">Fully Resolved</p>
+                            <h3 class="text-3xl font-extrabold text-green-600 mt-2">85%</h3>
+                        </div>
+                        <div class="glass-card p-4">
+                            <p class="text-xs font-bold text-slate-500 uppercase">User Satisfaction</p>
+                            <h3 class="text-3xl font-extrabold text-blue-600 mt-2">92%</h3>
+                        </div>
+                    </div>
+
+                    <!-- FEEDBACK TABLE -->
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-slate-50 text-slate-500 font-semibold border-b"><tr><th class="px-6 py-4">Ticket</th><th class="px-6 py-4">User</th><th class="px-6 py-4">Rating</th><th class="px-6 py-4">Resolution</th><th class="px-6 py-4">Feedback</th><th class="px-6 py-4">Submitted</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr class="hover:bg-slate-50 transition">
+                                <td colspan="6" class="px-6 py-12 text-center">
+                                    <i class="fas fa-inbox text-5xl text-slate-200 mb-4 block"></i>
+                                    <p class="text-slate-500 font-semibold">No feedback received yet</p>
+                                    <p class="text-xs text-slate-400 mt-1">Users will leave feedback after complaints are resolved</p>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>

@@ -40,7 +40,16 @@ class Complaint(models.Model):
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
     resolution = models.CharField(max_length=20, choices=RESOLUTION_CHOICES, blank=True, null=True)
+    
+    # Feedback System
     feedback = models.TextField(blank=True, null=True)
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)], blank=True, null=True)  # 1-5 stars
+    feedback_submitted_at = models.DateTimeField(blank=True, null=True)
+    
+    # Timestamps
+    solved_at = models.DateTimeField(blank=True, null=True)
+    closed_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         # 1. Generate ID if not present
