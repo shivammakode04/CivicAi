@@ -6,7 +6,6 @@ from core import views
 
 urlpatterns = [
     # Auth
-    path('admin/', admin.site.urls),
     path('', views.auth_view, name='auth'),
     path('logout-user/', views.logout_view, name='user_logout'), # Fixed name conflict
     path('accounts/', include('django.contrib.auth.urls')),

@@ -23,13 +23,36 @@ def auth_view(request):
             else: return render(request, 'auth.html', {'error': 'Invalid Credentials'})
         elif action == 'signup':
             try:
-                role = request.POST.get('role'); u = request.POST.get('username'); p = request.POST.get('password')
-                phone = request.POST.get('phone'); city = request.POST.get('city')
+                role = request.POST.get('role')
+                u = request.POST.get('username')
+                p = request.POST.get('password')
+                phone = request.POST.get('phone', '')
+                city = request.POST.get('city', 'Indore')
+                aadhar = request.POST.get('aadhar_id', '')
+                address = request.POST.get('address', '')
+                
                 if role == 'admin':
-                    dept = request.POST.get('department')
-                    user = User.objects.create_user(username=u, password=p, is_department_admin=True, department_name=dept, phone=phone, city=city)
+                    dept = request.POST.get('department', '')
+                    user = User.objects.create_user(
+                        username=u, 
+                        password=p, 
+                        is_department_admin=True, 
+                        department_name=dept, 
+                        phone=phone, 
+                        city=city,
+                        aadhar_id=aadhar,
+                        address=address
+                    )
                 else:
-                    user = User.objects.create_user(username=u, password=p, is_department_admin=False, phone=phone, city=city)
+                    user = User.objects.create_user(
+                        username=u, 
+                        password=p, 
+                        is_department_admin=False, 
+                        phone=phone, 
+                        city=city,
+                        aadhar_id=aadhar,
+                        address=address
+                    )
                 login(request, user)
                 return redirect('dashboard')
             except Exception as e: return render(request, 'auth.html', {'error': str(e)})
@@ -47,15 +70,21 @@ def update_profile_pic(request):
 
 @login_required
 def profile_view(request):
-    return render(request, 'profile.html', {'user': request.user})
+    user = request.user
+    if user.is_department_admin:
+        return render(request, 'admin_profile.html', {'user': user})
+    else:
+        return render(request, 'profile.html', {'user': user})
 
 @login_required
 def update_profile(request):
     if request.method == 'POST':
         user = request.user
-        user.phone = request.POST.get('phone')
-        user.city = request.POST.get('city')
-        user.address = request.POST.get('address')
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.phone = request.POST.get('phone', user.phone)
+        user.aadhar_id = request.POST.get('aadhar_id', user.aadhar_id)
+        user.address = request.POST.get('address', user.address)
         if request.FILES.get('profile_pic'):
             user.profile_pic = request.FILES['profile_pic']
         user.save()
