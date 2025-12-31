@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Civic AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-7xl mx-auto p-8">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">📈 Analytics Dashboard</h1>
+            <p class="text-gray-600 mt-2">Last {{ days }} days analysis</p>
+        </div>
+
+        <!-- METRICS -->
+        <div class="grid grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <p class="text-sm font-semibold text-gray-600 uppercase">Total Complaints</p>
+                <p class="text-4xl font-bold text-gray-800 mt-2">{{ analytics.total_complaints }}</p>
+                <p class="text-xs text-gray-500 mt-2">All time</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <p class="text-sm font-semibold text-gray-600 uppercase">This Month</p>
+                <p class="text-4xl font-bold text-blue-600 mt-2">{{ analytics.complaints_this_month }}</p>
+                <p class="text-xs text-gray-500 mt-2">Filed recently</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <p class="text-sm font-semibold text-gray-600 uppercase">Resolution Rate</p>
+                <p class="text-4xl font-bold text-green-600 mt-2">{{ analytics.resolved_percentage }}%</p>
+                <div class="w-full bg-gray-200 rounded-full h-2 mt-4">
+                    <div class="bg-green-600 h-2 rounded-full" style="width: {{ analytics.resolved_percentage }}%"></div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <p class="text-sm font-semibold text-gray-600 uppercase">Avg Resolution Time</p>
+                <p class="text-4xl font-bold text-orange-600 mt-2">{{ analytics.avg_resolution_time }}h</p>
+                <p class="text-xs text-gray-500 mt-2">Hours</p>
+            </div>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="grid grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-bold text-gray-800 mb-4">By Status</h3>
+                <canvas id="statusChart"></canvas>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-bold text-gray-800 mb-4">By Priority</h3>
+                <canvas id="priorityChart"></canvas>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6 col-span-2">
+                <h3 class="font-bold text-gray-800 mb-4">Trend (Last 7 Days)</h3>
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- EXPORT -->
+        <div class="flex gap-4">
+            <a href="{% url 'export_report' %}?format=csv" class="btn bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                <i class="fas fa-download"></i> Export as CSV
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Status Chart
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys({{ analytics.by_status|safe }}),
+                    datasets: [{
+                        data: Object.values({{ analytics.by_status|safe }}),
+                        backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6']
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            // Priority Chart
+            const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+            new Chart(priorityCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys({{ analytics.by_priority|safe }}),
+                    datasets: [{
+                        label: 'Count',
+                        data: Object.values({{ analytics.by_priority|safe }}),
+                        backgroundColor: ['#ef4444', '#f97316', '#3b82f6', '#6b7280']
+                    }]
+                },
+                options: { responsive: true, indexAxis: 'y' }
+            });
+
+            // Trend Chart
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            const trendData = {{ analytics.trend_data|safe }};
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: trendData.map(d => d.date),
+                    datasets: [{
+                        label: 'Complaints Filed',
+                        data: trendData.map(d => d.count),
+                        borderColor: '#4338ca',
+                        backgroundColor: 'rgba(67, 56, 202, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true }
+            });
+        });
+    </script>
+</body>
+</html>

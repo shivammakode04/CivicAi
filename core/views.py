@@ -177,7 +177,13 @@ def submit_complaint(request):
             priority=prio, 
             latitude=lat, 
             longitude=lng, 
-            city=request.user.city
+            city=request.user.city,
+            category=request.POST.get('category', 'Other'),
+            is_escalated=False,
+            sla_breached=False,
+            is_public=True,
+            views_count=0,
+            similar_complaints_count=0
         )
         # Removed confidence score from user notification
         send_notif(request.user, f"✅ Complaint submitted! Assigned to {dept}")

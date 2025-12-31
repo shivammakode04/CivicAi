@@ -29,12 +29,29 @@ class Complaint(models.Model):
     location_name = models.CharField(max_length=200)
     pincode = models.CharField(max_length=10)
     city = models.CharField(max_length=50) # Snapshot of city
+    title = models.CharField(blank=True, max_length=200)
     image = models.ImageField(upload_to='complaints/', blank=True, null=True)
     
     department = models.CharField(max_length=50) 
+    CATEGORY_CHOICES = [
+        ('Road/Street', 'Road/Street'),
+        ('Water/Sewage', 'Water/Sewage'),
+        ('Electricity', 'Electricity'),
+        ('Garbage', 'Garbage'),
+        ('Health', 'Health'),
+        ('Safety', 'Safety'),
+        ('Parks', 'Parks'),
+        ('Other', 'Other'),
+    ]
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='Other')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='Low')
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Pending')
     created_at = models.DateTimeField(auto_now_add=True)
+    is_escalated = models.BooleanField(default=False)
+    sla_breached = models.BooleanField(default=False)
+    is_public = models.BooleanField(default=True)
+    views_count = models.IntegerField(default=0)
+    similar_complaints_count = models.IntegerField(default=0)
 
     # Geo & Feedback
     latitude = models.FloatField(blank=True, null=True)
@@ -75,5 +92,6 @@ class Complaint(models.Model):
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     message = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, default='Notification')
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

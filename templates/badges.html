@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badges & Achievements - Civic AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-6xl mx-auto p-8">
+        <div class="mb-12 text-center">
+            <h1 class="text-4xl font-bold text-gray-800">🏆 Your Achievements</h1>
+            <p class="text-gray-600 mt-2">Earn badges by contributing to your community</p>
+        </div>
+
+        <!-- REPUTATION SCORE -->
+        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg p-8 text-white mb-8 text-center shadow-lg">
+            <p class="text-sm uppercase tracking-wide opacity-90">Your Reputation Score</p>
+            <p class="text-6xl font-bold mt-2">{{ reputation }}</p>
+            <p class="text-lg mt-2 opacity-90">Keep contributing to increase your score!</p>
+        </div>
+
+        <!-- BADGES GRID -->
+        <div class="grid grid-cols-3 gap-8">
+            {% for badge in badges %}
+            <div class="bg-white rounded-lg shadow-lg p-6 text-center hover:shadow-xl transition {% if not badge.earned %}opacity-50{% endif %}">
+                <div class="text-6xl mb-4">
+                    {% if badge.badge.badge_type == 'FIRST_COMPLAINT' %}🥇
+                    {% elif badge.badge.badge_type == 'POWER_CITIZEN' %}⚡
+                    {% elif badge.badge.badge_type == 'COMMUNITY_LEADER' %}👑
+                    {% elif badge.badge.badge_type == 'VERIFIED_SOLVER' %}✅
+                    {% elif badge.badge.badge_type == 'FAST_REPORTER' %}⚡
+                    {% elif badge.badge.badge_type == 'TOP_CONTRIBUTOR' %}🌟
+                    {% else %}🎖️
+                    {% endif %}
+                </div>
+                
+                <h3 class="font-bold text-lg text-gray-800">{{ badge.badge.name }}</h3>
+                <p class="text-gray-600 text-sm mt-2">{{ badge.badge.description }}</p>
+                
+                {% if badge.earned %}
+                <div class="mt-4 inline-block bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold">
+                    ✓ Earned
+                </div>
+                {% else %}
+                <div class="mt-4">
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div class="bg-blue-600 h-3 rounded-full" style="width: {{ badge.progress }}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-2">{{ badge.progress }}% - Need {{ badge.required }} {{ badge.badge.badge_type|lower }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- STATS -->
+        <div class="mt-12 grid grid-cols-3 gap-6">
+            <div class="bg-white rounded-lg shadow p-6 text-center">
+                <p class="text-3xl font-bold text-blue-600">{{ earned_count }}</p>
+                <p class="text-gray-600 text-sm mt-1">Badges Earned</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 text-center">
+                <p class="text-3xl font-bold text-green-600">{{ total_count }}</p>
+                <p class="text-gray-600 text-sm mt-1">Total Available</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 text-center">
+                <p class="text-3xl font-bold text-purple-600">{{ earned_count|add:"0"|mul:"100"|div:total_count|floatformat:0 }}%</p>
+                <p class="text-gray-600 text-sm mt-1">Completion</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
